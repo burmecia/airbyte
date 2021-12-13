@@ -222,5 +222,5 @@
 {%- endmacro %}
 
 {% macro clickhouse__json_extract_array(json_column, json_path_list, normalized_json_path) -%}
-    JSONExtractArrayRaw({{ json_column }}, {{ format_json_path(json_path_list) }})
+    JSONExtractArrayRaw(assumeNotNull({{ json_column }}), {{ format_json_path(json_path_list) }})
 {%- endmacro %}

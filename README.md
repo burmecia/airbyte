@@ -22,6 +22,27 @@ Airbyte is on a mission to make data integration pipelines a commodity.
 
 Here's a list of our [connectors with their health status](docs/integrations/).
 
+
+## Clickhouse support
+
+Airbyte currently supports clickhouse with DBT normalization. Make sure you are using the following versions:
+
+```
+worker: maxkferg/airbyte-worker:0.32.22-alpha
+```
+
+Update the clickhouse destination in Airbyte to:
+```
+maxkferg/destination-clickhouse:0.1.75
+```
+
+This worker has been tested with:
+```
+
+webapp: airbyte/webapp:0.32.11-alpha
+scheduler: airbyte/scheduler:0.32.11-alpha
+server: airbyte/server:0.32.11-alpha
+
 ## Quick start
 
 ```bash

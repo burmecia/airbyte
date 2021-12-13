@@ -36,6 +36,8 @@ import org.testcontainers.containers.ClickHouseContainer;
 
 public class ClickhouseDestinationTest {
 
+  private static final Integer PORT = 8123;
+  private static final Integer DBT_PORT = 9000;
   private static final String DB_NAME = "default";
   private static final String STREAM_NAME = "id_and_name";
   private static final ExtendedNameTransformer namingResolver = new ExtendedNameTransformer();
@@ -61,7 +63,8 @@ public class ClickhouseDestinationTest {
 
     config = Jsons.jsonNode(ImmutableMap.builder()
         .put("host", db.getHost())
-        .put("port", db.getFirstMappedPort())
+        .put("port", db.getMappedPort(PORT))
+        .put("dbt_port", db.getMappedPort(DBT_PORT))
         .put("database", DB_NAME)
         .put("username", db.getUsername())
         .put("password", db.getPassword())
@@ -134,5 +137,4 @@ public class ClickhouseDestinationTest {
                 .withData(Jsons.jsonNode(ImmutableMap.of("id", i, "name", "test name " + i)))))
         .collect(Collectors.toList());
   }
-
 }

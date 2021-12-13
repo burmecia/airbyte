@@ -26,7 +26,7 @@ DESTINATION_SIZE_LIMITS = {
     # https://docs.microsoft.com/en-us/sql/odbc/microsoft/column-name-limitations?view=sql-server-ver15
     DestinationType.MSSQL.value: 64,
     # https://stackoverflow.com/questions/68358686/what-is-the-maximum-length-of-a-column-in-clickhouse-can-it-be-modified
-    DestinationType.CLICKHOUSE.value: 63,
+    DestinationType.CLICKHOUSE.value: 128,
 }
 
 # DBT also needs to generate suffix to table names, so we need to make sure it has enough characters to do so...

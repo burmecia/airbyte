@@ -12,11 +12,12 @@
     
   as (
     
+-- depends_on: ref('dedup_cdc_excluded_stg')
 with
 
 input_data as (
     select *
-    from _airbyte_test_normalization.dedup_cdc_excluded_ab3
+    from _airbyte_test_normalization.dedup_cdc_excluded_stg
     -- dedup_cdc_excluded from test_normalization._airbyte_raw_dedup_cdc_excluded
 ),
 
@@ -65,7 +66,7 @@ dedup_data as (
         -- additionally, we generate a unique key for the scd table
         row_number() over (
             partition by _airbyte_unique_key, _airbyte_start_at, _airbyte_emitted_at, accurateCastOrNull(_ab_cdc_deleted_at, 'String'), accurateCastOrNull(_ab_cdc_updated_at, 'String')
-            order by _airbyte_ab_id
+            order by _airbyte_active_row desc, _airbyte_ab_id
         ) as _airbyte_row_num,
         assumeNotNull(hex(MD5(
             

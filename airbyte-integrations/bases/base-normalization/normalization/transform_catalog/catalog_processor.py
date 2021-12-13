@@ -68,6 +68,9 @@ class CatalogProcessor:
         for stream_processor in stream_processors:
             # MySQL table names need to be manually truncated, because it does not do it automatically
             truncate = self.destination_type == DestinationType.MYSQL
+            # Clickhouse table names need to be manually truncated, because it does not do it automatically
+            if self.destination_type == DestinationType.CLICKHOUSE:
+                truncate = True
             raw_table_name = self.name_transformer.normalize_table_name(f"_airbyte_raw_{stream_processor.stream_name}", truncate=truncate)
             add_table_to_sources(schema_to_source_tables, stream_processor.schema, raw_table_name)
 

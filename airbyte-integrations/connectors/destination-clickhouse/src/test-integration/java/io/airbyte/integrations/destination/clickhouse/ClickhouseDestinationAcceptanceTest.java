@@ -23,6 +23,8 @@ import org.testcontainers.containers.ClickHouseContainer;
 public class ClickhouseDestinationAcceptanceTest extends DestinationAcceptanceTest {
 
   private static final String DB_NAME = "default";
+  private static final Integer JDBC_PORT = 8123;
+  private static final Integer DBT_PORT = 9000;
 
   private final ExtendedNameTransformer namingResolver = new ExtendedNameTransformer();
 
@@ -63,7 +65,8 @@ public class ClickhouseDestinationAcceptanceTest extends DestinationAcceptanceTe
     // Since we disabled normalization and dbt test, we only use the JDBC port here.
     return Jsons.jsonNode(ImmutableMap.builder()
         .put("host", db.getHost())
-        .put("port", db.getFirstMappedPort())
+        .put("port", db.getMappedPort(JDBC_PORT))
+        .put("dbt_port", db.getMappedPort(DBT_PORT))
         .put("database", DB_NAME)
         .put("username", db.getUsername())
         .put("password", db.getPassword())

@@ -30,6 +30,7 @@ public class ClickhouseDestination extends AbstractJdbcDestination implements De
   public static final List<String> PORT_KEY = List.of("port");
 
   private static final String PASSWORD = "password";
+  private static final String DBT_PORT = "dbt_port";
 
   public static Destination sshWrappedDestination() {
     return new SshWrappedDestination(new ClickhouseDestination(), HOST_KEY, PORT_KEY);

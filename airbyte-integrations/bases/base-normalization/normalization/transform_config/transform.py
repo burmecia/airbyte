@@ -268,11 +268,12 @@ class TransformConfig:
     @staticmethod
     def transform_clickhouse(config: Dict[str, Any]):
         print("transform_clickhouse")
+        DEFAULT_DBT_PORT = 9000
         # https://docs.getdbt.com/reference/warehouse-profiles/clickhouse-profile
         dbt_config = {
             "type": "clickhouse",
             "host": config["host"],
-            "port": config["port"],
+            "port": config.get("dbt_port", DEFAULT_DBT_PORT),
             "schema": config["database"],
             "user": config["username"],
             "password": config["password"],

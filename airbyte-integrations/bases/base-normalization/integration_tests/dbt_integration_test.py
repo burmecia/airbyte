@@ -24,6 +24,7 @@ NORMALIZATION_TEST_MSSQL_DB_PORT = "NORMALIZATION_TEST_MSSQL_DB_PORT"
 NORMALIZATION_TEST_MYSQL_DB_PORT = "NORMALIZATION_TEST_MYSQL_DB_PORT"
 NORMALIZATION_TEST_POSTGRES_DB_PORT = "NORMALIZATION_TEST_POSTGRES_DB_PORT"
 NORMALIZATION_TEST_CLICKHOUSE_DB_PORT = "NORMALIZATION_TEST_CLICKHOUSE_DB_PORT"
+NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT = "NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT"
 
 
 class DbtIntegrationTest(object):
@@ -190,24 +191,24 @@ class DbtIntegrationTest(object):
             # wait for service is available
             print(f"....Waiting for MS SQL Server to start...{wait_sec} sec")
             time.sleep(wait_sec)
-        # Run additional commands to prepare the table
-        command_create_db = [
-            "docker",
-            "exec",
-            f"{self.container_prefix}_mssql",
-            "/opt/mssql-tools/bin/sqlcmd",
-            "-S",
-            config["host"],
-            "-U",
-            config["username"],
-            "-P",
-            config["password"],
-            "-Q",
-            f"CREATE DATABASE [{config['database']}]",
-        ]
-        # create test db
-        print("Executing: ", " ".join(command_create_db))
-        subprocess.call(command_create_db)
+            # Run additional commands to prepare the table
+            command_create_db = [
+                "docker",
+                "exec",
+                f"{self.container_prefix}_mssql",
+                "/opt/mssql-tools/bin/sqlcmd",
+                "-S",
+                config["host"],
+                "-U",
+                config["username"],
+                "-P",
+                config["password"],
+                "-Q",
+                f"CREATE DATABASE [{config['database']}]",
+            ]
+            # create test db
+            print("Executing: ", " ".join(command_create_db))
+            subprocess.call(command_create_db)
         if not os.path.exists("../secrets"):
             os.makedirs("../secrets")
         with open("../secrets/mssql.json", "w") as fh:
@@ -222,19 +223,28 @@ class DbtIntegrationTest(object):
         Ref: https://altinity.com/blog/2019/3/15/clickhouse-networking-part-1
         """
         start_db = True
-        if os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DB_PORT):
+        if os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DB_PORT) and os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT):
             port = int(os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DB_PORT))
+            dbt_port = int(os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT))
             start_db = False
+        elif os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DB_PORT) or os.getenv(NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT):
+            raise ValueError("One of NORMALIZATION_TEST_CLICKHOUSE_DB_PORT or NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT was set.")
         else:
             port = self.find_free_port()
+            dbt_port = self.find_free_port()
         config = {
             "host": "localhost",
             "port": port,
+            "dbt_port": dbt_port,
             "database": self.target_schema,
             "username": "default",
             "password": "",
             "ssl": False,
         }
+        if start_db:
+            print("Please set NORMALIZATION_TEST_CLICKHOUSE_DB_PORT and NORMALIZATION_TEST_CLICKHOUSE_DBT_PORT")
+            raise ValueError("Test runner does not start Clickhouse yet. Please start a CH server manually")
+
         if start_db:
             self.db_names.append("clickhouse")
             print("Starting localhost clickhouse container for tests")
@@ -247,9 +257,9 @@ class DbtIntegrationTest(object):
                 "--ulimit",
                 "nofile=262144:262144",
                 "-p",
-                "9000:9000",  # Python clickhouse driver use native port
-                "-p",
                 f"{config['port']}:8123",  # clickhouse JDBC driver use HTTP port
+                "-p",
+                f"{config['dbt_port']}:9000",  # clickhouse DBT driver use Native port
                 "-d",
                 # so far, only the latest version ClickHouse server image turned on
                 # window functions
@@ -260,12 +270,18 @@ class DbtIntegrationTest(object):
             print("....Waiting for ClickHouse DB to start...15 sec")
             time.sleep(15)
         # Run additional commands to prepare the table
+
+        # Need the name of the running container
+        # database_server_name = f"{self.container_prefix}_clickhouse
+        database_server_name = "some-clickhouse-server"
+
+        """
         command_create_db = [
             "docker",
             "run",
             "--rm",
             "--link",
-            f"{self.container_prefix}_clickhouse:clickhouse-server",
+            f"{database_server_name}:clickhouse-server",
             "clickhouse/clickhouse-client:21.8.10.19",
             "--host",
             "clickhouse-server",
@@ -274,11 +290,52 @@ class DbtIntegrationTest(object):
         ]
         # create test db
         print("Executing: ", " ".join(command_create_db))
-        subprocess.call(command_create_db)
+        """
+        self.reset_clickhouse_db(config["database"], database_server_name, drop_database=True)
+
         if not os.path.exists("../secrets"):
             os.makedirs("../secrets")
         with open("../secrets/clickhouse.json", "w") as fh:
             fh.write(json.dumps(config))
+
+    def reset_clickhouse_db(self, database_name, database_server_name, drop_database=False):
+        """
+        Create an empty database caleed @database_name
+        Drop @database_name if drop_database is set to true.
+        This function can be useful if you want to keep the test database running between tests.
+        """
+
+        command_drop_db = [
+            "docker",
+            "run",
+            "--rm",
+            "--link",
+            f"{database_server_name}:clickhouse-server",
+            "clickhouse/clickhouse-client:21.8.10.19",
+            "--host",
+            "clickhouse-server",
+            "--query",
+            f"DROP DATABASE IF EXISTS {database_name}",
+        ]
+
+        command_create_db = [
+            "docker",
+            "run",
+            "--rm",
+            "--link",
+            f"{database_server_name}:clickhouse-server",
+            "clickhouse/clickhouse-client:21.8.10.19",
+            "--host",
+            "clickhouse-server",
+            "--query",
+            f"CREATE DATABASE IF NOT EXISTS {database_name}",
+        ]
+        if drop_database:
+            print("Executing: ", " ".join(command_drop_db))
+            subprocess.call(command_drop_db)
+
+        print("Executing: ", " ".join(command_create_db))
+        subprocess.call(command_create_db)
 
     @staticmethod
     def find_free_port():
@@ -332,7 +389,7 @@ class DbtIntegrationTest(object):
             # Python ClickHouse driver uses native port 9000, which is different
             # from official ClickHouse JDBC driver
             clickhouse_config = copy(profiles_config)
-            clickhouse_config["port"] = 9000
+            clickhouse_config["port"] = profiles_config["dbt_port"]
             profiles_yaml = config_generator.transform(destination_type, clickhouse_config)
         else:
             profiles_yaml = config_generator.transform(destination_type, profiles_config)

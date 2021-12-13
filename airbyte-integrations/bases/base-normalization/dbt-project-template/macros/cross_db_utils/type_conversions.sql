@@ -12,6 +12,10 @@
     case when {{ boolean_column }} then 'true' else 'false' end
 {%- endmacro %}
 
+{% macro clickhouse__boolean_to_string(boolean_column) -%}
+    multiIf(cast({{ boolean_column }} as UInt8), 'true', 'false')
+{%- endmacro %}
+
 {# array_to_string -------------------------------------------------     #}
 {% macro array_to_string(array_column) -%}
   {{ adapter.dispatch('array_to_string')(array_column) }}
@@ -33,6 +37,10 @@
     cast({{ array_column }} as {{dbt_utils.type_string()}})
 {%- endmacro %}
 
+{% macro clickhouse__array_to_string(array_column) -%}
+    arrayStringConcat({{ array_column }})
+{%- endmacro %}
+
 {# cast_to_boolean -------------------------------------------------     #}
 {% macro cast_to_boolean(field) -%}
     {{ adapter.dispatch('cast_to_boolean')(field) }}
@@ -40,6 +48,11 @@
 
 {% macro default__cast_to_boolean(field) -%}
     cast({{ field }} as boolean)
+{%- endmacro %}
+
+{# -- Clickhouse does not support cast function converting string directly to boolean #}
+{% macro clickhouse__cast_to_boolean(field) -%}
+    if(lower({{ field }}) = 'true', 1, 0)
 {%- endmacro %}
 
 {# -- MySQL does not support cast function converting string directly to boolean (an alias of tinyint(1), https://dev.mysql.com/doc/refman/8.0/en/cast-functions.html#function_cast #}

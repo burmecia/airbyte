@@ -2,6 +2,7 @@
     indexes = [{'columns':['_airbyte_active_row','_airbyte_unique_key_scd','_airbyte_emitted_at'],'type': 'btree'}],
     unique_key = "_airbyte_unique_key_scd",
     schema = "test_normalization",
+    post_hook = ['delete from _airbyte_test_normalization.nested_stream_with_c__lting_into_long_names_stg where _airbyte_emitted_at != (select max(_airbyte_emitted_at) from _airbyte_test_normalization.nested_stream_with_c__lting_into_long_names_stg)'],
     tags = [ "top-level" ]
 ) }}
 -- depends_on: ref('nested_stream_with_c__lting_into_long_names_stg')
@@ -51,6 +52,17 @@ input_data as (
     -- nested_stream_with_c__lting_into_long_names from {{ source('test_normalization', '_airbyte_raw_nested_stream_with_complex_columns_resulting_into_long_names') }}
 ),
 {% endif %}
+input_data_with_active_row_num as (
+    select *,
+      row_number() over (
+        partition by {{ adapter.quote('id') }}
+        order by
+            {{ adapter.quote('date') }} is null asc,
+            {{ adapter.quote('date') }} desc,
+            _airbyte_emitted_at desc
+      ) as _airbyte_active_row_num
+    from input_data
+),
 scd_data as (
     -- SQL model to build a Type 2 Slowly Changing Dimension (SCD) table for each record identified by their primary key
     select
@@ -68,17 +80,11 @@ scd_data as (
             {{ adapter.quote('date') }} desc,
             _airbyte_emitted_at desc
       ) as _airbyte_end_at,
-      case when row_number() over (
-        partition by {{ adapter.quote('id') }}
-        order by
-            {{ adapter.quote('date') }} is null asc,
-            {{ adapter.quote('date') }} desc,
-            _airbyte_emitted_at desc
-      ) = 1 then 1 else 0 end as _airbyte_active_row,
+      case when _airbyte_active_row_num = 1 then 1 else 0 end as _airbyte_active_row,
       _airbyte_ab_id,
       _airbyte_emitted_at,
       _airbyte_nested_stre__nto_long_names_hashid
-    from input_data
+    from input_data_with_active_row_num
 ),
 dedup_data as (
     select
@@ -86,7 +92,7 @@ dedup_data as (
         -- additionally, we generate a unique key for the scd table
         row_number() over (
             partition by _airbyte_unique_key, _airbyte_start_at, _airbyte_emitted_at
-            order by _airbyte_ab_id
+            order by _airbyte_active_row desc, _airbyte_ab_id
         ) as _airbyte_row_num,
         {{ dbt_utils.surrogate_key([
           '_airbyte_unique_key',
