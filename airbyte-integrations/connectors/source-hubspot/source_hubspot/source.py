@@ -43,6 +43,8 @@ from source_hubspot.streams import (
     TicketPipelines,
     Tickets,
     Workflows,
+    SupabaseOrgs,
+    SupabaseProjects,
 )
 
 SCOPES = [
@@ -144,6 +146,8 @@ class SourceHubspot(AbstractSource):
             Tickets(**common_params),
             TicketPipelines(**common_params),
             Workflows(**common_params),
+            SupabaseOrgs(**common_params),
+            SupabaseProjects(**common_params),
         ]
 
         credentials_title = credentials.get("credentials_title")

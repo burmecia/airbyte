@@ -771,8 +771,17 @@ class CRMSearchStream(IncrementalStream, ABC):
         stream_records = {}
         payload = (
             {
-                "filters": [{"value": int(self._state.timestamp() * 1000), "propertyName": self.last_modified_field, "operator": "GTE"}],
-                "sorts": [{"propertyName": self.last_modified_field, "direction": "ASCENDING"}],
+                "filterGroups": [{
+                    "filters": [{
+                        "propertyName": self.last_modified_field,
+                        "operator": "GTE",
+                        "value": int(self._state.timestamp() * 1000)
+                    }]
+                }],
+                "sorts": [{
+                    "propertyName": self.last_modified_field,
+                    "direction": "ASCENDING"
+                }],
                 "properties": properties_list,
                 "limit": 100,
             }
@@ -1386,3 +1395,18 @@ class Quotes(CRMObjectIncrementalStream):
     entity = "quote"
     associations = ["deals"]
     primary_key = "id"
+
+
+class SupabaseOrgs(CRMSearchStream):
+    entity = "2-6507489"
+    last_modified_field = "hs_lastmodifieddate"
+    associations = []
+    primary_key = "id"
+
+
+class SupabaseProjects(CRMSearchStream):
+    entity = "2-6474023"
+    last_modified_field = "hs_lastmodifieddate"
+    associations = []
+    primary_key = "id"
+
