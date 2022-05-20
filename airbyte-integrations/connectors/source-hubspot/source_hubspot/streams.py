@@ -1397,16 +1397,21 @@ class Quotes(CRMObjectIncrementalStream):
     primary_key = "id"
 
 
+SUPABASE_ORG_TYPE = '2-6507489'
+SUPABASE_PROJECT_TYPE = '2-6474023'
+
+
 class SupabaseOrgs(CRMSearchStream):
-    entity = "2-6507489"
+    entity = SUPABASE_ORG_TYPE
     last_modified_field = "hs_lastmodifieddate"
-    associations = []
+    associations = ["contacts", SUPABASE_PROJECT_TYPE]
     primary_key = "id"
 
 
 class SupabaseProjects(CRMSearchStream):
-    entity = "2-6474023"
+    entity = SUPABASE_PROJECT_TYPE
     last_modified_field = "hs_lastmodifieddate"
-    associations = []
+    associations = ["contacts", SUPABASE_ORG_TYPE]
     primary_key = "id"
+
 
