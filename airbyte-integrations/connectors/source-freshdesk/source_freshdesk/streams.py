@@ -113,7 +113,7 @@ class IncrementalFreshdeskStream(FreshdeskStream, IncrementalMixin):
         self, stream_state: Mapping[str, Any], stream_slice: Mapping[str, any] = None, next_page_token: Mapping[str, Any] = None
     ) -> MutableMapping[str, Any]:
         params = super().request_params(stream_state=stream_state, stream_slice=stream_slice, next_page_token=next_page_token)
-        params[self.cursor_filter] = stream_state.get(self.cursor_field, self.start_date)
+        params[self.cursor_filter] = stream_state.get(self.cursor_field, self.start_date).strftime('%Y-%m-%dT%H:%M:%SZ')
         return params
 
     def read_records(
